@@ -61,6 +61,8 @@ type VM struct {
 	channelObjectMap *objectMap
 
 	sync.Mutex
+
+	pkgFuncTable map[string]map[string]bool
 }
 
 // New initializes a vm to initialize state and returns it.
@@ -92,6 +94,7 @@ func New(fileDir string, args []string) *VM {
 
 	vm.mainObj = vm.initMainObj()
 	vm.channelObjectMap = &objectMap{store: map[int]Object{}}
+	vm.pkgFuncTable = map[string]map[string]bool{}
 
 	return vm
 }

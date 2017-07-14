@@ -5,6 +5,10 @@ import (
 	"io/ioutil"
 	"path"
 	"time"
+	"golang.org/x/tools/go/loader"
+	"log"
+	"reflect"
+	"go/ast"
 )
 
 const (
@@ -73,8 +77,51 @@ func initObjectClass(c *RClass) *RClass {
 	return objectClass
 }
 
+
+func send(v interface{}, fn string, args ...interface{}) interface{} {
+	inputs := make([]reflect.Value, len(args))
+	for i, _ := range args {
+		inputs[i] = reflect.ValueOf(args[i])
+	}
+	return reflect.ValueOf(reflect.ValueOf(v).MethodByName(fn).Call(inputs))
+}
+
+
 func builtinCommonInstanceMethods() []*BuiltInMethodObject {
 	return []*BuiltInMethodObject{
+		{
+			Name: "import",
+			Fn: func(receiver Object) builtinMethodBody {
+				return func(t *thread, args []Object, blockFrame *callFrame) Object {
+					var conf loader.Config
+					pkgPath := args[0].(*StringObject).Value
+					fnTable := make(map[string]bool)
+					conf.Import(pkgPath)
+
+					prog, err := conf.Load()
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					prog.InitialPackages()
+					pkg := prog.Package(pkgPath)
+					fmt.Println(pkg.Pkg.Name())
+					files := pkg.Files
+					for _, f := range files {
+						for _, decl := range f.Decls {
+							fn, isFn := decl.(*ast.FuncDecl)
+							if isFn && fn.Name.IsExported() {
+								fnTable[fn.Name.Name] = true
+							}
+						}
+					}
+
+					t.vm.pkgFuncTable[pkgPath] = fnTable
+
+					return NULL
+				}
+			},
+		},
 		{
 			// Loads the given Goby library name without extension (mainly for modules), returning `true`
 			// if successful and `false` if the feature is already loaded.

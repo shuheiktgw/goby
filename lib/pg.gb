@@ -1,0 +1,25 @@
+class Struct
+  attr_reader :object
+end
+
+class SQL
+  import "database/sql"
+  import "github.com/lib/pq"
+
+  def initialize(struct)
+    @conn = struct
+  end
+
+  def self.open(adapter, url)
+    # This returns a struct object
+    new(sql.send("Open", adapter, url))
+  end
+
+  def query(sql)
+    @conn.send("Query", sql)
+  end
+
+  def sql
+    package("database/sql")
+  end
+end
